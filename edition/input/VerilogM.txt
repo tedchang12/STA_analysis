@@ -1,0 +1,17 @@
+module NAND2(Y, A, B);
+    input    A, B;
+    output    Y;
+    nand(Y, A, B);
+endmodule
+
+module NOR2 (Y, A, B);
+    output    Y;
+    input    A, B;
+    nor    (Y, A, B);
+endmodule
+
+module NOT1 (Y, A);
+    output    Y;
+    input    A;
+    not    I0(Y, A);
+endmodule

@@ -1,0 +1,23 @@
+## Modify this file to fit your own environment ##
+
+set company "CIC"
+set designer "Student"
+set search_path      ". $search_path"
+set link_library     "cadcontest.db"
+set target_library   "cadcontest.db"
+set symbol_library   ""
+set synthetic_library ""
+
+
+set hdlin_translate_off_skip_text "TRUE"
+set edifout_netlist_only "TRUE"
+set verilogout_no_tri true
+set plot_command {lpr -Plp}
+
+set sh_enable_line_editing true
+set sh_line_editing_mode emacs
+history keep 100
+alias h history
+
+
+
