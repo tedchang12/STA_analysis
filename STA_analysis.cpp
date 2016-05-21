@@ -81,44 +81,55 @@ struct path
 	int size;
 	bool *inputvec;
 };
-Node **wireNode;
-Node **hashNode;
-Node **Graphlink;
+struct ATPG_node
+{
+	string endGatename;
+	string *inputvector;
+	ATPG_node *next;
+};
+ATPG_node *ATPG_head;
 int countpath;
-Node *Gatenode;
-Node *conGate;
 inoutInfo Info[3];
 int NodeSize;
 pros_MOD *posmod;
 string *topoOrder;
 stack <string>DFStack;
 stack <string>topoStack;
-path *truePath;
-Node *findNode(string);
 int test;
 int k11;
-path *pthead;
-path *Thead;
 void construcwirehash();
-Node *findwire(string);
 void PrintPath(string *,int size);
 void ExamTruePath();
 void FinishTable();
 void delcontrain(int);
 void PrintPathvec(string *,int ,bool *);
-Node *findNode1(string a);
-Node *ptrtemp;
 void findrealinput();
 bool checkwinput(string a);
+Node *findNode1(string a);
+Node *findNode(string);
+Node *findwire(string);
+Node *ptrtemp;
+Node **wireNode;
+Node **hashNode;
+Node **Graphlink;
+Node *Gatenode;
+Node *conGate;
+path *pthead;
+path *Thead;
+path *truePath;
+void F_input();
 int main(int argc, char** argv)
 {
-	ptrtemp=new Node;
 	run(argv[1],argv[2],0);
 	cout<<"Case: "<<argv[2]<<endl;
 	return 0;
 }
+
 void run(string a,string b,int constrain)
 {
+	ptrtemp=new Node;
+	ATPG_head = new ATPG_node;
+	ATPG_head->next = NULL;
 	time_t nStart = time(NULL);
 	pros_mod(a);
 	parse(b);
@@ -136,8 +147,9 @@ void run(string a,string b,int constrain)
 	time_t end = time(NULL);
 	cout<<endl<<endl<<"Time: "<<end-nStart<<"(seconds)"<<"	Find #path:"<<test<<endl;
 	int k=0;
-	p_nodeinfo();
-	findrealinput();
+	F_input();
+	//p_nodeinfo();
+	//findrealinput();
 	/*ExamTruePath();
 	path *outemp = Thead;
 	outemp=outemp->next;
@@ -163,6 +175,50 @@ bool checkwinput(string a)
 	delete temp;
 	free(temp);
 	return che;
+}
+void F_input()
+{
+	path *ptemp = new path;
+	ptemp = pthead;
+	ptemp=ptemp->next;
+	stack <string> inputstack;
+	Node *temp = new Node;
+	string last;
+	ATPG_node *ATPG_temp = new ATPG_node;
+	while(ptemp->next!=NULL)
+	{
+		last = ptemp->pth[ptemp->size-1];
+		ATPG_temp = ATPG_head;
+		ATPG_temp = ATPG_temp->next;
+		bool csame = false;
+		while(ATPG_temp)
+		{
+			if(ATPG_temp->endGatename==last)
+				csame=true;
+			ATPG_temp=ATPG_temp->next;
+		}
+		if(!csame)
+		{
+			ATPG_node *Atemp = new ATPG_node;
+			Atemp->endGatename = last;
+			Atemp->next=ATPG_head->next;
+			ATPG_head->next=Atemp;
+		}
+		ptemp=ptemp->next;
+
+	}
+	ATPG_temp = ATPG_head;
+	while(ATPG_temp)
+	{
+		cout<<ATPG_temp->endGatename<<endl;
+		ATPG_temp = ATPG_temp->next;
+	}
+	temp = NULL;
+	delete temp;
+	free(temp);
+	ATPG_temp = NULL;
+	delete ATPG_temp;
+	free(ATPG_temp);
 }
 void findrealinput()
 {
