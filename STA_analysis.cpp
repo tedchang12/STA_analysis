@@ -75,6 +75,7 @@ struct Node
 struct path
 {
 	string *pth;
+	string *realinput;
 	path *next;
 	path *tail;
 	int size;
@@ -105,9 +106,13 @@ void ExamTruePath();
 void FinishTable();
 void delcontrain(int);
 void PrintPathvec(string *,int ,bool *);
+Node *findNode1(string a);
+Node *ptrtemp;
+void findrealinput();
+bool checkwinput(string a);
 int main(int argc, char** argv)
 {
-
+	ptrtemp=new Node;
 	run(argv[1],argv[2],0);
 	cout<<"Case: "<<argv[2]<<endl;
 	return 0;
@@ -130,10 +135,12 @@ void run(string a,string b,int constrain)
 	delcontrain(constrain);
 	time_t end = time(NULL);
 	cout<<endl<<endl<<"Time: "<<end-nStart<<"(seconds)"<<"	Find #path:"<<test<<endl;
-	//ExamTruePath();
-	/*path *outemp = Thead;
-	outemp=outemp->next;
 	int k=0;
+	p_nodeinfo();
+	findrealinput();
+	/*ExamTruePath();
+	path *outemp = Thead;
+	outemp=outemp->next;
 	while(outemp!=NULL)
 	{
 		PrintPathvec(outemp->pth,outemp->size,outemp->inputvec);
@@ -141,9 +148,66 @@ void run(string a,string b,int constrain)
 		k++;
 	}
 	cout<<"Find #True path:"<<k<<endl;
-	
-	//p_nodeinfo();
 	*/
+	//p_nodeinfo();*/
+	
+}
+bool checkwinput(string a)
+{
+	bool che=false;
+	Node *temp = new Node;
+	temp = findNode(a);
+	if(temp->Gate=="input")
+		che=true;
+	temp = NULL;
+	delete temp;
+	free(temp);
+	return che;
+}
+void findrealinput()
+{
+	path *ptemp = new path;
+	ptemp = pthead;
+	ptemp=ptemp->next;
+	stack <string> inputstack;
+	Node *temp = new Node;
+	while(ptemp->next!=NULL)
+	{
+		for(int i=0;i<ptemp->size;i++)
+		{
+			temp = findNode(ptemp->pth[i]);
+			if(checkt(temp->Gate)==3)
+			{
+				if(checkwinput(temp->input[0]))
+				{
+					inputstack.push(temp->input[0]);
+				}
+			}
+			else
+			{
+				if(checkwinput(temp->input[0]))
+				{
+					inputstack.push(temp->input[0]);
+				}
+				if(checkwinput(temp->input[1]))
+				{
+					inputstack.push(temp->input[1]);
+				}
+			}
+		}
+		int stksize=inputstack.size();
+		ptemp->realinput=new string[stksize];
+		for(int i=0;i<stksize;i++)
+		{
+			ptemp->realinput[i]=inputstack.top();
+			inputstack.pop();
+		}
+		ptemp=ptemp->next;
+	}	
+	temp = NULL;
+	delete temp;
+	free(temp);
+
 }
 void delcontrain(int constrained)
 {
@@ -187,7 +251,8 @@ void exampath(string *path1,int size)
 	for(int i=1;i<size;i++)
 	{
 		Node *temp=findNode(path1[i]);
-		if(findNode(last)->outWire==temp->input[1])
+		Node *temp1=findNode(last);
+		if(temp1->outWire==temp->input[1])
 			comsfrom=true;
 		if(comsfrom==false&&temp->True_a!=true)
 		{
@@ -200,6 +265,12 @@ void exampath(string *path1,int size)
 			break;
 		}
 		last=path1[i];
+		temp=NULL;
+		delete temp;
+		free(temp);
+		temp1=NULL;	
+		delete temp1;	
+		free(temp1);
 	}
 	if(checkTrue==true)
 	{
@@ -245,6 +316,8 @@ void ExamTruePath()
 		temp->b_arrival=0;
 		temp->True_a=false;
 		temp->True_b=false;
+		temp = NULL;
+		delete temp;
 	}
 	int cou=0;
 	//cout<<findNode("U145")->G_name<<endl;
@@ -263,6 +336,11 @@ void ExamTruePath()
 				break;
 			}
 		}
+		for(int i=NodeSize-Info[0].size;i<NodeSize;i++)
+		{
+			cout<<Gatenode[i].output;
+		}
+		cout<<endl;
 		if(chck!=false)
 		{
 			Gatenode[tempcount].output=true;
@@ -405,7 +483,14 @@ void FinishTable()
 		wtemp->True_a=temp->True_a;
 		wtemp->True_b=temp->True_b;
 		wtemp->output=temp->output;
+		wtemp=NULL;
+		delete wtemp;
+		free(wtemp);
+		inputA=NULL;
+		delete inputA;
+		free(inputA);
 		
+
 	}
 }
 void getNode_linklist()
@@ -499,27 +584,25 @@ void topofunc()
 }
 Node *findNode(string a)
 {
-	Node *temp = new Node;
 	int hash=calhash(a);
-	temp = hashNode[hash];
-	while(a!=temp->G_name&&temp->next!=NULL)
+	ptrtemp = hashNode[hash];
+	while(a!=ptrtemp->G_name&&ptrtemp->next!=NULL)
 	{
-		temp=temp->next;
+		ptrtemp=ptrtemp->next;
 	}
-	return temp;
+	return ptrtemp;
 }
 Node *findwire(string a)
 {
 	int hash = calwirehash(a)%NodeSize;
-	Node *temp11=new Node;
-	temp11 = wireNode[hash];
-	while(temp11->outWire!=a&&temp11->next!=NULL)
+	ptrtemp = wireNode[hash];
+	while(ptrtemp->outWire!=a&&ptrtemp->next!=NULL)
 	{
-		temp11=temp11->next;
+		ptrtemp=ptrtemp->next;
 	}
 	
 
-	return temp11;
+	return ptrtemp;
 
 }
 int calwirehash(string str)
@@ -803,9 +886,7 @@ void DFS(string a,int indd)
 		}
 		
 		//PrintPath(ptemp->pth,b);
-		cout<<test<<' ';
-		test++;
-		
+			
 	}
 
 	DFStack.pop();
