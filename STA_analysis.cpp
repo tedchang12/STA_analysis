@@ -40,6 +40,14 @@ void getNode_linklist();
 void verifyTruePath();
 void exampath(string *,int);
 int globalcount;
+struct setNode
+{
+	int time;
+	bool output;
+	string G_name;
+	setNode *next;
+	setNode *down;
+};
 struct inoutInfo
 {
 	string *info;
@@ -84,9 +92,13 @@ struct path
 struct ATPG_node
 {
 	string endGatename;
+	int size;
 	string *inputvector;
+	string *AT_topoOrder;
 	ATPG_node *next;
+	int toposize;
 };
+setNode **hashSet;
 ATPG_node *ATPG_head;
 int countpath;
 inoutInfo Info[3];
@@ -104,6 +116,7 @@ void FinishTable();
 void delcontrain(int);
 void PrintPathvec(string *,int ,bool *);
 void findrealinput();
+void F_Tpath();
 bool checkwinput(string a);
 Node *findNode1(string a);
 Node *findNode(string);
@@ -117,14 +130,28 @@ Node *conGate;
 path *pthead;
 path *Thead;
 path *truePath;
-void F_input();
+setNode *setTemp;
+setNode *findSet(string);
+void F_endpoint();
+void F_inputVector();
+int findTopoIndex(string);
+void True_cal();
+bool onpath(path *,string);
+void consSet();
+bool T_path(int,bool,int,bool,int,int &,bool &,bool);
+void expressVector(string);
+void recDFS(setNode *,setNode *);
+stack <string> T_gate;
+stack <bool> T_bol;
+stack <string> Tb_gate;
+stack <bool> Tb_bol;
+
 int main(int argc, char** argv)
 {
-	run(argv[1],argv[2],0);
+	run(argv[1],argv[2],atoi(argv[3]));
 	cout<<"Case: "<<argv[2]<<endl;
 	return 0;
 }
-
 void run(string a,string b,int constrain)
 {
 	ptrtemp=new Node;
@@ -139,18 +166,23 @@ void run(string a,string b,int constrain)
 	//p_nodeinfo();
 	getNode_linklist();
 	//p_nodeinfo();
-
 	getpath();
-
 	topofunc();
-	delcontrain(constrain);
-	time_t end = time(NULL);
-	cout<<endl<<endl<<"Time: "<<end-nStart<<"(seconds)"<<"	Find #path:"<<test<<endl;
+	//delcontrain(constrain);
 	int k=0;
-	F_input();
+	F_endpoint();
+	F_Tpath();
+	consSet();
+	True_cal();
+	time_t end = time(NULL);
+	cout<<endl;
+	expressVector("U186");
+	cout<<endl<<endl<<"Time: "<<end-nStart<<"(seconds)"<<"	Find #path:"<<test<<endl;
+	cout<<"After del constrain #path:"<<globalcount<<endl;
 	//p_nodeinfo();
 	//findrealinput();
-	/*ExamTruePath();
+	//ExamTruePath();
+	/*
 	path *outemp = Thead;
 	outemp=outemp->next;
 	while(outemp!=NULL)
@@ -160,15 +192,593 @@ void run(string a,string b,int constrain)
 		k++;
 	}
 	cout<<"Find #True path:"<<k<<endl;
-	*/
+	
 	//p_nodeinfo();*/
 	
+}
+void expressVector(string gatename)
+{
+	setNode *t = findSet(gatename);
+	setNode *tempdown;
+	if(t!=NULL)
+	{
+		t = t->down;
+		if(t!=NULL)
+			t = t->next;
+		while(t!=NULL)
+		{
+			tempdown = t->down;
+			while(tempdown!=NULL)
+			{
+
+				recDFS(tempdown->next,(tempdown->next)->next);
+				
+				tempdown = tempdown->down;
+
+				
+			}
+			t = t->next;
+		}
+	}
+	
+}
+void recDFS(setNode *ina,setNode *inb)
+{
+	
+	ina = ina->down;
+	inb = inb->down;
+	bool com =true;
+	bool coma = false;
+	bool comb = false;
+	if((ina->next)->next!=NULL)
+	{
+		com = false;
+		recDFS(ina->next,(ina->next)->next);
+	}
+	
+	else
+	{
+
+		ina = ina->next;
+		coma = true;
+		//cout<<"Gate:"<<ina->G_name<<"	bol:"<<ina->output<<endl;
+		T_gate.push(ina->G_name);
+		T_bol.push(ina->output);
+	}
+	if((inb->next)->next!=NULL)
+	{
+		com=false;
+		recDFS(inb->next,(inb->next)->next);
+	}
+	else
+	{
+		comb=true;
+		inb = inb->next;
+		//cout<<"Gate:"<<inb->G_name<<"	bol:"<<inb->output<<endl;
+		Tb_gate.push(inb->G_name);
+		Tb_bol.push(inb->output);
+	}
+	if((coma||comb)&&com)
+	{
+		stack <string> T_stack=T_gate;
+		stack <bool> T_stackofbol = T_bol;
+		while(!T_stack.empty())
+		{
+			cout<<"Gate:"<<T_stack.top()<<"	bol:"<<T_stackofbol.top()<<endl;
+			T_stack.pop();
+			T_stackofbol.pop();
+		}
+		T_stack = Tb_gate;
+		T_stackofbol = Tb_bol;
+		while(!T_stack.empty())
+		{
+			cout<<"Gate:"<<T_stack.top()<<"	bol:"<<T_stackofbol.top()<<endl;
+			T_stack.pop();
+			T_stackofbol.pop();
+		}
+		if(coma&&!T_bol.empty())
+		{
+			T_bol.pop();
+			T_gate.pop();
+		}
+		if(comb&!Tb_bol.empty())
+		{
+			Tb_bol.pop();
+			Tb_gate.pop();
+		}
+		
+
+		cout<<"############################################################"<<endl;
+	}
+	if(!com)
+	{
+		while(!T_gate.empty())
+		{
+			T_gate.pop();
+			T_bol.pop();
+		}
+		while(!Tb_gate.empty())
+		{
+			Tb_gate.pop();
+			Tb_bol.pop();
+		}
+	}
+
+	
+	
+	//cout<<"Gate:"<<ina->G_name<<"	bol:"<<ina->output<<endl;
+
+	
+}
+bool onpath(path *pthe,string gname) 
+{
+	for(int i=0;i<pthe->size;i++)
+	{
+		if(pthe->pth[i]==gname)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+bool T_path(int A_Time,bool com_a,int B_Time,bool com_b,int ctype,int &caltime,bool &bol_out,bool comfrom)
+{	
+	bool ta = true;
+	bool tb = true;
+	int aorder = 0;
+	if(ctype==3)
+	{
+		bol_out=!com_a;
+	}
+	if(ctype==2)
+	{
+		bol_out=!(com_a|com_b);
+	}
+	if(ctype==1)
+	{
+		bol_out=!(com_a&com_b);
+	}
+	if(A_Time<B_Time) //a faster than b
+		aorder=1;
+	if(A_Time>B_Time)
+		aorder=2;
+		
+	switch(ctype)
+	{
+		case 1:
+			switch(aorder)
+			{
+				case 0:
+					if(!com_a&&com_b)
+						tb=false;
+					if(com_a&&!com_b)
+						ta=false;
+				break;
+				case 1:
+					if((com_a&&com_b)||(com_a&&!com_b))
+						ta=false;
+					if((!com_a&&com_b)||(!com_a&&!com_b))
+						tb=false;
+				break;
+				case 2:
+					if((com_a&&!com_b)||(!com_a&&!com_b))
+						ta=false;
+					if((com_a&&com_b)||(!com_a&&com_b))
+						tb=false;
+				break;
+			}
+		break;
+		case 2:
+			switch(aorder)
+			{
+				case 0:
+					if(!com_a&&com_b)
+						ta=false;
+					if(com_a&&!com_b)
+						tb=false;
+				break;
+				case 1:
+					if((!com_a&&com_b)||(!com_a&&!com_b))
+						ta=false;
+					if((com_a&&com_b)||(com_a&&!com_b))
+						tb=false;
+				break;
+				case 2:
+					if((com_a&&com_b)||(!com_a&&com_b))
+						ta=false;
+					if((com_a&&!com_b)||(!com_a&&!com_b))
+						tb=false;
+				break;
+			}
+		break;
+	}
+	if(ta&&tb)
+	{
+		caltime = A_Time>B_Time?A_Time:B_Time;
+		caltime+=1;
+	}
+	else if(!ta)
+	{
+		caltime = B_Time+1;
+	}
+	else
+	{
+		caltime = A_Time+1;
+	}
+	if((!comfrom&&ta)||(comfrom&&tb))
+	{
+		return true;
+	}
+	//cout<<endl<<"A_T:	"<<A_Time<<"	B_T:"<<B_Time<<"	A_bol:"<<com_a<<"	B_bol:"<<com_b<<"	FALSE"<<endl;
+	return false;
+}
+void True_cal()
+{
+	int count=0;
+	
+	setNode *inputs = new setNode;
+	for(int i=NodeSize-Info[0].size;i<NodeSize;i++)
+	{
+		setNode *no = new setNode;
+		string gname = Gatenode[i].G_name;
+		inputs = findSet(gname);
+		inputs->down=no;
+		inputs = no;
+		no->G_name=gname;
+		setNode *ina = new setNode;
+		setNode *inb = new setNode;
+		ina->G_name=gname;
+		inb->G_name=gname;
+		ina->time=0;
+		ina->output=true;
+		inb->time=0;
+		inb->output=false;
+		inputs->next=ina;
+		ina->next=inb;
+		inb->next=NULL;
+		setNode *dum = new setNode;
+		setNode *dum1 = new setNode;
+		ina->down=dum;
+		dum->down=NULL;
+		inb->down=dum1;
+		dum1->down=NULL;
+		setNode *s1= new setNode;
+		setNode *s2= new setNode;
+		s1->G_name = gname;
+		dum->next=s1;
+		s1->next=NULL;
+		dum1->next=s2;
+		s2->G_name = gname;
+		s2->next=NULL;
+		s1->output=true;
+		s2->output=false;
+	}
+	/*
+	for(int i=NodeSize-Info[0].size;i<NodeSize;i++)
+	{
+		string gname = Gatenode[i].G_name;
+		inputs = findSet(gname);
+		inputs = inputs->down;
+		while(inputs->next!=NULL)
+		{
+			inputs=inputs->next;
+			setNode *bb = inputs;
+			bb=bb->down;
+			bb=bb->next;
+			cout<<bb->output<<"	";
+		}
+	}*/
+	
+
+	//give input value 1227git s
+	path *ptemp = new path;
+	ptemp=pthead;
+	ptemp=ptemp->next;
+	setNode *_A = new setNode;
+	setNode *_B = new setNode;
+	setNode *_G = new setNode;
+	
+	while(ptemp!=NULL)
+	{
+		string terNode=ptemp->pth[ptemp->size-1]; // find terminated Node
+		ATPG_node *A_temp = new ATPG_node;
+		int pathcounter = 1;
+		string lastNode = ptemp->pth[0];
+		A_temp = ATPG_head->next;
+		string *G_topo;
+		int t_size;
+		bool cal_bol;
+		int cal_time;
+		
+		while(A_temp->endGatename!=terNode)//find endNode
+		{
+			A_temp=A_temp->next;
+		}
+		
+		G_topo = A_temp->AT_topoOrder; //get topofunction
+		t_size = A_temp->toposize; // get toposize;
+		cout<<"<-------------------------------------------------------------------------------------------->"<<endl;
+		//cout<<A_temp->endGatename<<endl;
+		for(int i=0;i<ptemp->size;i++)
+		{
+			cout<<ptemp->pth[i]<<"->";
+		}
+		cout<<endl;
+		for(int i=0;i<t_size;i++)
+		{
+			//cout<<G_topo[i]<<":"<<endl;
+			Node *Gate_ = findNode(G_topo[i]);
+			int ctype = checkt(Gate_->Gate);
+			setNode *G = new setNode;
+			G = findSet(G_topo[i]);			
+			_A =findSet(findwire(Gate_->input[0])->G_name);
+			
+			if(onpath(ptemp,G_topo[i]))//gate on the eva path 若是true path才留下來
+			{
+				bool comfrom =false;
+				if(findwire(Gate_->input[1])->G_name==lastNode)
+					comfrom = true;
+				if(ctype!=3)
+				{
+					_B = findSet(findwire(Gate_->input[1])->G_name);
+					setNode *F_B = _B->down;
+					F_B=F_B->next;
+					_A = _A->down;
+					_A = _A->next;
+					setNode *Gtemp = new setNode;
+					G->down = Gtemp;
+					Gtemp->next=NULL;
+					setNode *GTT = G->down; //0724
+					while(_A!=NULL)
+					{
+						_B =F_B;
+						while(_B!=NULL)
+						{
+
+							
+							if(T_path(_A->time,_A->output,_B->time,_B->output,ctype,cal_time,cal_bol,comfrom))
+							{
+								T_path(_A->time,_A->output,_B->time,_B->output,ctype,cal_time,cal_bol,comfrom);
+								//cout<<"time:"<<cal_time<<"	";
+								//cout<<_A->output<<_B->output<<"	bool:"<<cal_bol<<"	";
+								Gtemp = G->down;
+								while(Gtemp!=NULL)
+								{
+									if(Gtemp->time==cal_time&&Gtemp->output==cal_bol)
+										break;
+									Gtemp=Gtemp->next;
+								}
+								setNode *Gntemp = new setNode;
+								setNode *setTemp = new setNode;
+								setNode *setA = new setNode;
+								setNode *setB = new setNode;
+								if(Gtemp==NULL)
+								{
+									setNode *k = G->down;
+									Gntemp->next = k->next;
+									Gntemp->time = cal_time;
+									Gntemp->output = cal_bol;
+									k->next = Gntemp;
+									Gntemp->down = setTemp;
+									setA->down = _A->down;
+									setB->down = _B->down;
+									setTemp->next=setA;
+									setA->next=setB;
+									setB->next=NULL;
+								}
+								else if(Gtemp!=NULL)
+								{
+									setTemp->down=Gtemp->down;
+									Gtemp->down=setTemp;
+									setA->down = _A->down;
+									setB->down = _B->down;
+									setTemp->next=setA;
+									setA->next=setB;
+									setB->next=NULL;
+								}
+							}
+							_B = _B->next;
+						}
+						_A = _A->next;
+					}
+					/*
+					setNode *k = G->down;
+					k=k->next;
+					while(k!=NULL)
+					{
+						
+						cout<<"time:"<<k->time<<"	";
+						cout<<"Bol:"<<k->output<<"	";
+						k=k->next;
+						
+					}
+					
+					cout<<endl;
+					*/
+
+				}
+				else //Not Gate always be a true path 直接繼承上一個input 0724 need to redesign
+				{
+					setNode *AT=_A->down;
+					AT= AT->next;
+					setNode *GT = G;
+					setNode *dow = new setNode;
+					GT->down = dow;
+					dow->next=NULL;
+					dow->down=NULL;
+					GT = GT->down;
+					while(AT!=NULL)
+					{
+						//cout<<"bool:"<<AT->output<<"	";
+						setNode *top = new setNode;
+						top->next = GT->next;
+						GT->next = top;
+						top->output=!(AT->output);
+						top->time = AT->time+1;
+						top->down = AT->down;
+						AT=AT->next;
+					}					
+					//cout<<endl;
+				}
+				lastNode=ptemp->pth[pathcounter];
+				pathcounter++;
+				
+			}
+			else
+			{
+				bool comfrom =false;
+				
+				if(ctype!=3)
+				{
+					_B = findSet(findwire(Gate_->input[1])->G_name);
+					setNode *F_B = _B->down;
+					F_B=F_B->next;
+					_A = _A->down;
+					_A = _A->next;
+					setNode *Gtemp = new setNode;
+					G->down = Gtemp;
+					Gtemp->next=NULL;
+					setNode *GTT = G->down; //0724
+					while(_A!=NULL)
+					{
+						_B =F_B;
+						while(_B!=NULL)
+						{
+							if(true)//T_path(_A->time,_A->output,_B->time,_B->output,ctype,cal_time,cal_bol,comfrom))
+							{
+								T_path(_A->time,_A->output,_B->time,_B->output,ctype,cal_time,cal_bol,comfrom);
+								//cout<<"time:"<<cal_time<<"	";
+								//cout<<_A->output<<_B->output<<"	bool:"<<cal_bol<<"	";
+								Gtemp = G->down;
+								while(Gtemp!=NULL)
+								{
+									if(Gtemp->time==cal_time&&Gtemp->output==cal_bol)
+										break;
+									Gtemp=Gtemp->next;
+								}
+								setNode *Gntemp = new setNode;
+								setNode *setTemp = new setNode;
+								setNode *setA = new setNode;
+								setNode *setB = new setNode;
+								if(Gtemp==NULL)
+								{
+									setNode *k = G->down;
+									Gntemp->next = k->next;
+									Gntemp->time = cal_time;
+									Gntemp->output = cal_bol;
+									k->next = Gntemp;
+									Gntemp->down = setTemp;
+									setA->down = _A->down;
+									setB->down = _B->down;
+									setTemp->next=setA;
+									setA->next=setB;
+									setB->next=NULL;
+								}
+								else if(Gtemp!=NULL)
+								{
+									setTemp->down=Gtemp->down;
+									Gtemp->down=setTemp;
+									setA->down = _A->down;
+									setB->down = _B->down;
+									setTemp->next=setA;
+									setA->next=setB;
+									setB->next=NULL;
+								}
+							}
+							_B = _B->next;
+						}
+						
+						_A = _A->next;
+					}
+					/*
+					setNode *k = G->down;
+					k=k->next;
+					while(k!=NULL)
+					{
+						
+						cout<<"time:"<<k->time<<"	";
+						cout<<"Bol:"<<k->output<<"	";
+						k=k->next;
+						
+					}
+					
+					cout<<endl;*/
+				}
+				else //Not Gate always be a true path 直接繼承上一個input 0724
+				{
+					setNode *AT=_A->down;
+					AT= AT->next;
+					setNode *GT = G;
+					setNode *dow = new setNode;
+					GT->down = dow;
+					dow->next=NULL;
+					dow->down=NULL;
+					GT = GT->down;
+					while(AT!=NULL)
+					{
+						//cout<<"bool:"<<AT->output<<"	";
+						setNode *top = new setNode;
+						top->next = GT->next;
+						GT->next = top;
+						top->output=!(AT->output);
+						top->time = AT->time+1;
+						top->down = AT->down;
+						AT=AT->next;
+					}					
+					//cout<<endl;
+				}
+				
+			
+			}
+			
+		}
+		//freeNode動作 1227
+		expressVector(terNode);
+		for(int i=0;i<NodeSize-Info[0].size;i++)
+		{
+			findSet(Gatenode[i].G_name)->down=NULL;
+		}
+		ptemp=ptemp->next;
+		
+		
+	}
+}
+void F_Tpath()
+{
+	for(int i=NodeSize-Info[0].size;i<NodeSize;i++)
+	{
+		Node *temp = findwire(Gatenode[i].G_name);
+		temp->finishedTime=0;
+		temp->output=false;
+		temp->a_arrival=0;
+		temp->b_arrival=0;
+		temp->True_a=false;
+		temp->True_b=false;
+		temp = NULL;
+		delete temp;
+	}
+	path *ptemp = new path;
+	ptemp=pthead;
+	ptemp=ptemp->next;
+	string last;
+	ATPG_node *Atemp = new ATPG_node;
+
+	while(ptemp->next!=NULL)
+	{
+		last = ptemp->pth[ptemp->size-1];
+		Atemp = ATPG_head;
+		while(Atemp->endGatename!=last)
+		{
+			Atemp=Atemp->next;
+		}
+		ptemp=ptemp->next;
+	}
 }
 bool checkwinput(string a)
 {
 	bool che=false;
 	Node *temp = new Node;
-	temp = findNode(a);
+	temp = findwire(a);
 	if(temp->Gate=="input")
 		che=true;
 	temp = NULL;
@@ -176,7 +786,194 @@ bool checkwinput(string a)
 	free(temp);
 	return che;
 }
-void F_input()
+void F_inputVector() //need optimize to find topoorder
+{
+	ATPG_node *temp = new ATPG_node;
+	temp = ATPG_head;
+	temp = temp->next;
+	stack <string> tempStack;
+	stack <string> inputstack;
+	string gatename;
+	Node *topInfo = new Node;
+	string ai[1000];
+	int tempi=0;
+	Node *wtemp = new Node;
+	while(temp)
+	{
+		string tempTopo[100000];
+		int tempcounter=0;
+		gatename = temp->endGatename;
+		tempTopo[tempcounter] = gatename;
+		tempcounter++;
+		tempStack.push(gatename);
+		while(!tempStack.empty())
+		{
+			gatename=tempStack.top();
+			tempStack.pop();
+			topInfo = findNode(gatename);
+			if(checkt(topInfo->Gate)==3)
+			{
+				if(checkwinput(topInfo->input[0]))
+				{
+					inputstack.push(topInfo->input[0]);
+					bool che=false;
+					for(int i=0;i<tempcounter;i++)
+					{
+						if(tempTopo[i]==topInfo->G_name)
+						{
+							che=true;
+							break;
+						}
+					}
+					if(che==false)
+					{
+						tempTopo[tempcounter]=topInfo->G_name;
+						tempcounter++;
+					}
+				}
+				else
+				{
+					wtemp = findwire(topInfo->input[0]);
+					tempStack.push(wtemp->G_name);
+					bool che=false;
+					for(int i=0;i<tempcounter;i++)
+					{
+						if(tempTopo[i]==wtemp->G_name)
+						{
+							che=true;
+							break;
+						}
+					}
+					if(che==false)
+					{
+						tempTopo[tempcounter]=wtemp->G_name;
+						tempcounter++;
+					}
+				}
+			}
+			else if(checkt(topInfo->Gate)==2||checkt(topInfo->Gate)==1)
+			{
+				bool che=false;
+					for(int i=0;i<tempcounter;i++)
+					{
+						if(tempTopo[i]==topInfo->G_name)
+						{
+							che=true;
+							break;
+						}
+					}
+					if(che==false)
+					{
+						tempTopo[tempcounter]=topInfo->G_name;
+						tempcounter++;
+					}
+				if(checkwinput(topInfo->input[0]))
+				{
+					inputstack.push(topInfo->input[0]);
+				}
+				else
+				{
+					wtemp = findwire(topInfo->input[0]);
+					tempStack.push(wtemp->G_name);
+					bool che=false;
+					for(int i=0;i<tempcounter;i++)
+					{
+						if(tempTopo[i]==wtemp->G_name)
+						{
+							che=true;
+							break;
+						}
+					}
+					if(che==false)
+					{
+						tempTopo[tempcounter]=wtemp->G_name;
+						tempcounter++;
+					}
+				}
+				if(checkwinput(topInfo->input[1]))
+				{
+					inputstack.push(topInfo->input[1]);
+				}
+				else
+				{
+					wtemp = findwire(topInfo->input[1]);
+					tempStack.push(wtemp->G_name);
+					bool che=false;
+					for(int i=0;i<tempcounter;i++)
+					{
+						if(tempTopo[i]==wtemp->G_name)
+						{
+							che=true;
+							break;
+						}
+					}
+					if(che==false)
+					{
+						tempTopo[tempcounter]=wtemp->G_name;
+						tempcounter++;
+					}
+				}
+			}
+
+		}
+		temp->AT_topoOrder = new string[tempcounter];
+		temp->toposize=tempcounter;
+		for(int i=0;i<tempcounter;i++)
+		{
+			temp->AT_topoOrder[i]=tempTopo[i];
+		}
+		tempi=0;
+		ai[tempi]=inputstack.top();
+		inputstack.pop();
+		tempi++;
+		int ksize = inputstack.size();
+		for(int i=0;i<ksize;i++)
+		{
+			bool ch=false;
+			for(int j=0;j<tempi;j++)
+			{
+				if(ai[j]==inputstack.top())
+					ch=true;
+			}
+			if(!ch)
+			{
+				ai[tempi]=inputstack.top();
+				tempi++;
+			}
+			inputstack.pop();
+		}
+		temp->size = tempi;
+		temp->inputvector=new string[tempi];
+		for(int i=0;i<tempi;i++)
+		{
+			temp->inputvector[i]=ai[i];
+		}
+		temp=temp->next;
+	}
+	topInfo = NULL;
+	delete topInfo;
+	free(topInfo);
+	temp = NULL;
+	delete temp;
+	free(temp);
+}
+setNode *findSet(string a)
+{
+	int temp = calhash(a);
+	setTemp = hashSet[temp];
+	if(setTemp->next!=NULL)
+	{
+		setTemp=setTemp->next;
+	}
+	while(setTemp!=NULL)
+	{
+		if(setTemp->G_name==a)
+			break;
+		setTemp=setTemp->next;
+	}
+	return setTemp;
+}
+void F_endpoint()
 {
 	path *ptemp = new path;
 	ptemp = pthead;
@@ -207,10 +1004,44 @@ void F_input()
 		ptemp=ptemp->next;
 
 	}
-	ATPG_temp = ATPG_head;
+	F_inputVector();
+
+	ATPG_temp = ATPG_head; //ATPGinput 0102
 	while(ATPG_temp)
 	{
-		cout<<ATPG_temp->endGatename<<endl;
+		//cout<<ATPG_temp->endGatename<<":"<<endl;
+		int *indexary = new int[ATPG_temp->toposize];
+		int tsize=ATPG_temp->toposize;
+		for(int i=0;i<tsize;i++)
+		{
+			indexary[i]=findTopoIndex(ATPG_temp->AT_topoOrder[i]);
+		}
+		for(int i=0;i<tsize;i++)
+		{
+			for(int j=i;j<tsize;j++)
+			{
+				if(indexary[j]<indexary[i])
+				{
+					int temp=indexary[j];
+					indexary[j]=indexary[i];
+					indexary[i]=temp;
+				}
+			}
+		}
+		for(int i=0;i<tsize;i++)
+		{
+			ATPG_temp->AT_topoOrder[i]=topoOrder[indexary[i]];
+			//cout<<ATPG_temp->AT_topoOrder[i]<<"	";
+		}
+
+
+		for(int i=0;i<ATPG_temp->size;i++)
+		{
+			//cout<<"Input"<<i<<":"<<ATPG_temp->inputvector[i]<<endl;
+			indexary[i]=findTopoIndex(ATPG_temp->inputvector[i]);
+		}
+		
+		//cout<<endl;
 		ATPG_temp = ATPG_temp->next;
 	}
 	temp = NULL;
@@ -219,6 +1050,35 @@ void F_input()
 	ATPG_temp = NULL;
 	delete ATPG_temp;
 	free(ATPG_temp);
+}
+void consSet()
+{
+	hashSet = new setNode*[NodeSize];
+	for(int i=0;i<NodeSize;i++)
+	{
+		hashSet[i] = new setNode;
+		hashSet[i]->next=NULL;
+		hashSet[i]->down=NULL;
+	}
+	for(int i=0;i<NodeSize;i++)
+	{
+		int temp = calhash(Gatenode[i].G_name);
+		setNode *newNode = new setNode;
+		newNode->G_name=Gatenode[i].G_name;
+		newNode->next=hashSet[temp]->next;
+		hashSet[temp]->next=newNode;
+	}
+	
+}
+int findTopoIndex(string gname) //t0102
+{
+	for(int i=0;i<NodeSize-Info[0].size;i++)
+	{
+		if(topoOrder[i]==gname)
+			return i;
+	}
+	return -1;
+
 }
 void findrealinput()
 {
@@ -288,13 +1148,14 @@ void delcontrain(int constrained)
 		//cout<<"path:"<<count<<"	";
 		//PrintPath(ptemp->pth,ptemp->size);
 	}
-	/*ptemp=pthead;
+	/*
+	ptemp=pthead;
 	ptemp=ptemp->next;
 	while(ptemp->next!=NULL)
 	{
 		count++;
-		cout<<"path:"<<count<<"	";
-		PrintPath(ptemp->pth,ptemp->size);
+		//cout<<"path:"<<count<<"	";
+		//PrintPath(ptemp->pth,ptemp->size);
 		ptemp=ptemp->next;
 	}*/
 	
@@ -933,6 +1794,7 @@ void DFS(string a,int indd)
 		ptemp->next=pthead->next;
 		pthead->next=ptemp;
 		int countsize=b-1;
+		test++;
 		//cout<<"path:"<<test<<"	";
 		while(!tempstack.empty())
 		{
@@ -1134,6 +1996,7 @@ void parse(string a)
 			temp.pop();
 			temp.pop();
 			Gatenode[countk].outWire=temp.front();
+
 		}
 		else if(checkt(temp.front())==2||checkt(temp.front())==1)
 		{
@@ -1141,19 +2004,63 @@ void parse(string a)
 			temp.pop();
 			Gatenode[countk].G_name=temp.front();
 			temp.pop();
-			temp.pop();
-			Gatenode[countk].input[0]=temp.front();
-			temp.pop();
-			temp.pop();
-			Gatenode[countk].input[1]=temp.front();
-			temp.pop();
-			temp.pop();
-			Gatenode[countk].outWire=temp.front();
+			if(temp.front()=="A")
+			{
+				temp.pop();
+				Gatenode[countk].input[0]=temp.front();
+				temp.pop();
+			}
+			else if(temp.front()=="B")
+			{
+				temp.pop();
+				Gatenode[countk].input[1]=temp.front();
+				temp.pop();
+			}
+			else if(temp.front()=="Y")
+			{
+				temp.pop();
+				Gatenode[countk].outWire=temp.front();
+				temp.pop();
+			}
+			if(temp.front()=="A")
+			{
+				temp.pop();
+				Gatenode[countk].input[0]=temp.front();
+				temp.pop();
+			}
+			else if(temp.front()=="B")
+			{
+				temp.pop();
+				Gatenode[countk].input[1]=temp.front();
+				temp.pop();
+			}
+			else if(temp.front()=="Y")
+			{
+				temp.pop();
+				Gatenode[countk].outWire=temp.front();
+				temp.pop();
+			}
+			if(temp.front()=="A")
+			{
+				temp.pop();
+				Gatenode[countk].input[0]=temp.front();
+			}
+			else if(temp.front()=="B")
+			{
+				temp.pop();
+				Gatenode[countk].input[1]=temp.front();
+			}
+			else if(temp.front()=="Y")
+			{
+				temp.pop();
+				Gatenode[countk].outWire=temp.front();
+			}
+			
 			
 		}
 		countk++;
 		temp.pop();
-
+		
 	}
 	for(int i=0;i<NodeSize;i++)
 	{
