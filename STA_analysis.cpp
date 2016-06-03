@@ -225,84 +225,25 @@ void expressVector(string gatename)
 void recDFS(setNode *ina,setNode *inb)
 {
 	
-	ina = ina->down;
-	inb = inb->down;
-	bool com =true;
-	bool coma = false;
-	bool comb = false;
-	if((ina->next)->next!=NULL)
+	setNode *right = inb;
+	right = right->down;
+	setNode *left = ina;
+	left = left->down;
+	if(left->next!=NULL)
 	{
-		com = false;
-		recDFS(ina->next,(ina->next)->next);
+		while((left->next)->next!=NULL&&(left->next)->down!=NULL)
+		{
+			recDFS(left->next,(left->next)->next);
+		}
+	}
+	if(right->next!=NULL)
+	{
+		while((right->next)->next!=NULL&&(right->next)->down!=NULL)
+		{
+			recDFS(right->next,(right->next)->next);
+		}
 	}
 	
-	else
-	{
-
-		ina = ina->next;
-		coma = true;
-		//cout<<"Gate:"<<ina->G_name<<"	bol:"<<ina->output<<endl;
-		T_gate.push(ina->G_name);
-		T_bol.push(ina->output);
-	}
-	if((inb->next)->next!=NULL)
-	{
-		com=false;
-		recDFS(inb->next,(inb->next)->next);
-	}
-	else
-	{
-		comb=true;
-		inb = inb->next;
-		//cout<<"Gate:"<<inb->G_name<<"	bol:"<<inb->output<<endl;
-		Tb_gate.push(inb->G_name);
-		Tb_bol.push(inb->output);
-	}
-	if((coma||comb)&&com)
-	{
-		stack <string> T_stack=T_gate;
-		stack <bool> T_stackofbol = T_bol;
-		while(!T_stack.empty())
-		{
-			cout<<"Gate:"<<T_stack.top()<<"	bol:"<<T_stackofbol.top()<<endl;
-			T_stack.pop();
-			T_stackofbol.pop();
-		}
-		T_stack = Tb_gate;
-		T_stackofbol = Tb_bol;
-		while(!T_stack.empty())
-		{
-			cout<<"Gate:"<<T_stack.top()<<"	bol:"<<T_stackofbol.top()<<endl;
-			T_stack.pop();
-			T_stackofbol.pop();
-		}
-		if(coma&&!T_bol.empty())
-		{
-			T_bol.pop();
-			T_gate.pop();
-		}
-		if(comb&!Tb_bol.empty())
-		{
-			Tb_bol.pop();
-			Tb_gate.pop();
-		}
-		
-
-		cout<<"############################################################"<<endl;
-	}
-	if(!com)
-	{
-		while(!T_gate.empty())
-		{
-			T_gate.pop();
-			T_bol.pop();
-		}
-		while(!Tb_gate.empty())
-		{
-			Tb_gate.pop();
-			Tb_bol.pop();
-		}
-	}
 
 	
 	
