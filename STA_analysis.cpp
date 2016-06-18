@@ -40,6 +40,7 @@ void getNode_linklist();
 void verifyTruePath();
 void exampath(string *,int);
 int globalcount;
+void finalgeneration();
 struct setNode
 {
 	int time;
@@ -58,6 +59,13 @@ struct pros_MOD
 {
 	int caltype;
 	string Gatename;
+};
+struct InVal
+{
+	string InNam;
+	bool Inbol;
+	InVal *next;
+	InVal *down;
 };
 struct Node
 {
@@ -78,7 +86,7 @@ struct Node
 	bool output;
 	bool True_a;
 	bool True_b;	
-
+	InVal *down;
 };
 struct path
 {
@@ -98,6 +106,7 @@ struct ATPG_node
 	ATPG_node *next;
 	int toposize;
 };
+int truepathcounter;
 setNode **hashSet;
 ATPG_node *ATPG_head;
 int countpath;
@@ -145,7 +154,7 @@ stack <string> T_gate;
 stack <bool> T_bol;
 stack <string> Tb_gate;
 stack <bool> Tb_bol;
-
+int deltruecounter;
 int main(int argc, char** argv)
 {
 	run(argv[1],argv[2],atoi(argv[3]));
@@ -154,6 +163,8 @@ int main(int argc, char** argv)
 }
 void run(string a,string b,int constrain)
 {
+	deltruecounter = 0;
+	truepathcounter = 0;
 	ptrtemp=new Node;
 	ATPG_head = new ATPG_node;
 	ATPG_head->next = NULL;
@@ -168,7 +179,7 @@ void run(string a,string b,int constrain)
 	//p_nodeinfo();
 	getpath();
 	topofunc();
-	//delcontrain(constrain);
+	delcontrain(constrain);
 	int k=0;
 	F_endpoint();
 	F_Tpath();
@@ -179,6 +190,7 @@ void run(string a,string b,int constrain)
 	expressVector("U186");
 	cout<<endl<<endl<<"Time: "<<end-nStart<<"(seconds)"<<"	Find #path:"<<test<<endl;
 	cout<<"After del constrain #path:"<<globalcount<<endl;
+	cout<<"After del non true path:"<<deltruecounter<<endl;
 	//p_nodeinfo();
 	//findrealinput();
 	//ExamTruePath();
@@ -196,27 +208,36 @@ void run(string a,string b,int constrain)
 	//p_nodeinfo();*/
 	
 }
+void finalgeneration()
+{
+	path *phead = new path;
+	phead = pthead;
+	phead = phead->next;
+	while(phead!=NULL)
+	{
+
+		phead = phead -> next;
+	}
+}
 void expressVector(string gatename)
 {
 	setNode *t = findSet(gatename);
 	setNode *tempdown;
+	
 	if(t!=NULL)
 	{
 		t = t->down;
 		if(t!=NULL)
 			t = t->next;
+		if(t==NULL)
+		{
+			deltruecounter++;
+		}
 		while(t!=NULL)
 		{
 			tempdown = t->down;
-			while(tempdown!=NULL)
-			{
+			//recDFS(tempdown->next,(tempdown->next)->next);
 
-				recDFS(tempdown->next,(tempdown->next)->next);
-				
-				tempdown = tempdown->down;
-
-				
-			}
 			t = t->next;
 		}
 	}
@@ -224,31 +245,85 @@ void expressVector(string gatename)
 }
 void recDFS(setNode *ina,setNode *inb)
 {
-	
-	setNode *right = inb;
+	bool change = true;
+	setNode *right = new setNode;
+	right = ina;
+	setNode *left = new setNode;
+	left = inb;
 	right = right->down;
-	setNode *left = ina;
 	left = left->down;
-	if(left->next!=NULL)
+	right = right->next;
+	left = left->next;
+	if(right!=NULL&&right->down==NULL&&right->next==NULL)
 	{
-		while((left->next)->next!=NULL&&(left->next)->down!=NULL)
-		{
-			recDFS(left->next,(left->next)->next);
-		}
+		change = false;
+		//cout<<right->G_name<<"	"<<endl;
+		T_gate.push(right->G_name);
+		T_bol.push(right->output);
 	}
-	if(right->next!=NULL)
+	if(left!=NULL&&left->down==NULL&&left->next==NULL)
 	{
-		while((right->next)->next!=NULL&&(right->next)->down!=NULL)
+		change = false;
+		//cout<<left->G_name<<"	"<<endl;
+		T_gate.push(left->G_name);
+		T_bol.push(left->output);
+	}
+	while(right)
+	{
+		if(right->next!=NULL&&right->down!=NULL)
+			recDFS(right,right->next);
+		if(right!=NULL)
+			right = right->down;
+	}
+	while(left)
+	{
+		if(left->next!=NULL&&left->down!=NULL)
+			recDFS(left,left->next);
+		if(left!=NULL)
+			left = left->down;
+	}
+	if(change == true)
+	{
+		string tempa[10000];
+		bool tempb[10000];
+		int tempcounter = 0;
+		cout<<"Paht: "<<truepathcounter++<<endl;
+		Tb_gate = T_gate;
+		Tb_bol = T_bol;
+		while(!Tb_gate.empty())
 		{
-			recDFS(right->next,(right->next)->next);
+			string _A = Tb_gate.top();
+			bool _B = Tb_bol.top();
+			bool changetemp = false;
+			int judgecounter = 0;
+			while(judgecounter<tempcounter)
+			{
+				if(tempa[judgecounter]==_A)
+				{
+					changetemp=true;
+					break;
+				}
+				judgecounter++;
+			}
+			if(!changetemp)
+			{
+				cout<<"Input:"<<Tb_gate.top();
+				cout<<"	bool: "<<Tb_bol.top()<<endl;
+				tempa[tempcounter] = Tb_gate.top();
+				tempb[tempcounter] = Tb_bol.top();
+				tempcounter++;
+			}
+			Tb_gate.pop();
+			Tb_bol.pop();
 		}
+		T_bol.pop();
+		T_gate.pop();
+		cout<<"################################################################"<<endl;
 	}
 	
-
 	
 	
-	//cout<<"Gate:"<<ina->G_name<<"	bol:"<<ina->output<<endl;
-
+	//cout<<"input:"<<left->G_name<<"	bol:"<<left->output<<endl;
 	
 }
 bool onpath(path *pthe,string gname) 
